@@ -38,8 +38,7 @@ async def root_route_handler(request):
 async def stream_handler(request: web.Request):
     try:
         path = request.match_info["path"]
-        match = re.search(r"^(\w{6})(\d+)$", path)
-        if match:
+        if match := re.search(r"^(\w{6})(\d+)$", path):
             secure_hash = match.group(1)
             message_id = int(match.group(2))
         else:
@@ -48,9 +47,7 @@ async def stream_handler(request: web.Request):
         return await media_streamer(request, message_id, secure_hash)
     except ValueError:
         raise web.HTTPNotFound
-    except AttributeError:
-        pass
-    except BadStatusLine:
+    except (AttributeError, BadStatusLine):
         pass
 
 
@@ -98,12 +95,11 @@ async def media_streamer(request: web.Request, message_id: int, secure_hash: str
                 file_name = f"{secrets.token_hex(2)}.{mime_type.split('/')[1]}"
             except (IndexError, AttributeError):
                 file_name = f"{secrets.token_hex(2)}.unknown"
+    elif file_name:
+        mime_type = mimetypes.guess_type(file_properties.file_name)
     else:
-        if file_name:
-            mime_type = mimetypes.guess_type(file_properties.file_name)
-        else:
-            mime_type = "application/octet-stream"
-            file_name = f"{secrets.token_hex(2)}.unknown"
+        mime_type = "application/octet-stream"
+        file_name = f"{secrets.token_hex(2)}.unknown"
     if "video/" in mime_type or "audio/" in mime_type:
         disposition = "inline"
     return_resp = web.Response(
